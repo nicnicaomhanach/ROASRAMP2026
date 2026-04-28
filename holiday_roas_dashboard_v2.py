@@ -66,7 +66,8 @@ def load_data():
         st.error("❌ Data file not found. Please ensure '2026ROASRAMP_Holiday_weekly.csv' is in the repository.")
         st.stop()
 
-    df = pd.read_csv(file_path, low_memory=False)
+    # Read CSV with error handling for malformed lines
+    df = pd.read_csv(file_path, low_memory=False, on_bad_lines='skip', encoding='utf-8')
 
     if is_preaggregated:
         # Data is already weekly aggregated
