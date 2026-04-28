@@ -66,8 +66,9 @@ def load_data():
         st.error("❌ Data file not found. Please ensure '2026ROASRAMP_Holiday_weekly.csv' is in the repository.")
         st.stop()
 
-    # Read CSV with error handling for malformed lines
-    df = pd.read_csv(file_path, low_memory=False, on_bad_lines='skip', encoding='utf-8', header=0)
+    # Read CSV with automatic delimiter detection
+    # The file might be comma or tab delimited depending on how it was uploaded
+    df = pd.read_csv(file_path, sep=None, engine='python', on_bad_lines='skip', encoding='utf-8', header=0)
 
     # Verify required columns exist
     if is_preaggregated and 'week' not in df.columns:
