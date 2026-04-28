@@ -43,37 +43,62 @@ def load_data():
     """Load the CSV file"""
     # Use relative path for deployment
     import os
-    # Try relative path first (for deployment), then absolute path (for local)
-    if os.path.exists('2026ROASRAMP_Holiday.csv'):
-        file_path = '2026ROASRAMP_Holiday.csv'
-    else:
-        file_path = '/Users/nkavanagh/Downloads/2026ROASRAMP_Holiday.csv'
+
+    # Check which file exists and use it
+    possible_files = [
+        '2026ROASRAMP_Holiday_weekly.csv',
+        '2026ROASRAMP_Holiday_filtered.csv',
+        '2026ROASRAMP_Holiday.csv',
+        '/Users/nkavanagh/Downloads/2026ROASRAMP_Holiday.csv'
+    ]
+
+    file_path = None
+    is_preaggregated = False
+
+    for f in possible_files:
+        if os.path.exists(f):
+            file_path = f
+            if 'weekly' in f:
+                is_preaggregated = True
+            break
+
+    if file_path is None:
+        st.error("❌ Data file not found. Please ensure '2026ROASRAMP_Holiday_weekly.csv' is in the repository.")
+        st.stop()
 
     df = pd.read_csv(file_path, low_memory=False)
 
-    # Convert day to datetime
-    df['day'] = pd.to_datetime(df['day'])
+    if is_preaggregated:
+        # Data is already weekly aggregated
+        df['week'] = pd.to_datetime(df['week'])
+        # Shift dates forward by 1 year for 2026/2027 forecast
+        df['week'] = df['week'] + pd.DateOffset(years=1)
+        # Add day column for compatibility
+        df['day'] = df['week']
+    else:
+        # Convert day to datetime
+        df['day'] = pd.to_datetime(df['day'])
+        # Shift dates forward by 1 year for 2026/2027 forecast
+        df['day'] = df['day'] + pd.DateOffset(years=1)
+        # Add helper columns
+        df['week'] = df['day'].dt.to_period('W').apply(lambda r: r.start_time)
 
-    # Shift dates forward by 1 year for 2026/2027 forecast
-    df['day'] = df['day'] + pd.DateOffset(years=1)
+        # Filter extreme outliers for ROAS (keep values between 0 and 99th percentile)
+        roas_99th = df['ROAS'].quantile(0.99)
+        df = df[df['ROAS'] <= roas_99th]
 
-    # Add helper columns
-    df['week'] = df['day'].dt.to_period('W').apply(lambda r: r.start_time)
-    df['month'] = df['day'].dt.to_period('M').apply(lambda r: r.start_time)
-    df['year_week'] = df['day'].dt.strftime('%Y-W%W')
+        # Filter extreme outliers for CPA (keep values <= 99th percentile)
+        cpa_99th = df['CPA'].quantile(0.99)
+        df = df[df['CPA'] <= cpa_99th]
+
+    df['month'] = df['week'].dt.to_period('M').apply(lambda r: r.start_time)
+    df['year_week'] = df['week'].dt.strftime('%Y-W%W')
 
     # Clean numeric columns (using USD values only)
-    numeric_cols = ['CPM (USD)', 'ROAS', 'CPA', 'CTR (%)', 'oCTR (%)', 'CVR (%)', 'AOV']
+    numeric_cols = ['CPM (USD)', 'ROAS', 'CPA', 'CTR (%)', 'CVR (%)', 'AOV']
     for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-
-    # Filter extreme outliers for ROAS (keep values between 0 and 99th percentile)
-    roas_99th = df['ROAS'].quantile(0.99)
-    df = df[df['ROAS'] <= roas_99th]
-
-    # Filter extreme outliers for CPA (keep values <= 99th percentile)
-    cpa_99th = df['CPA'].quantile(0.99)
-    df = df[df['CPA'] <= cpa_99th]
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
     return df
 
