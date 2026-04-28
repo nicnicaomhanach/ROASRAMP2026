@@ -66,9 +66,15 @@ def load_data():
         st.error("❌ Data file not found. Please ensure '2026ROASRAMP_Holiday_weekly.csv' is in the repository.")
         st.stop()
 
-    # Read CSV with automatic delimiter detection
-    # The file might be comma or tab delimited depending on how it was uploaded
-    df = pd.read_csv(file_path, sep=None, engine='python', on_bad_lines='skip', encoding='utf-8', header=0)
+    # Read CSV/TSV - try both delimiters as GitHub may convert format on upload
+    # First check if we got a single column with tabs (meaning it's tab-delimited but read as comma)
+    df_test = pd.read_csv(file_path, nrows=1, encoding='utf-8', header=0)
+
+    # If we only have 1 column and it contains tabs, the file is tab-delimited
+    if len(df_test.columns) == 1 and '\t' in df_test.columns[0]:
+        df = pd.read_csv(file_path, sep='\t', on_bad_lines='skip', encoding='utf-8', header=0)
+    else:
+        df = pd.read_csv(file_path, on_bad_lines='skip', encoding='utf-8', header=0)
 
     # Verify required columns exist
     if is_preaggregated and 'week' not in df.columns:
