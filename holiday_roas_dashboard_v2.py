@@ -67,7 +67,12 @@ def load_data():
         st.stop()
 
     # Read CSV with error handling for malformed lines
-    df = pd.read_csv(file_path, low_memory=False, on_bad_lines='skip', encoding='utf-8')
+    df = pd.read_csv(file_path, low_memory=False, on_bad_lines='skip', encoding='utf-8', header=0)
+
+    # Verify required columns exist
+    if is_preaggregated and 'week' not in df.columns:
+        st.error(f"❌ Expected 'week' column not found in {file_path}. Available columns: {list(df.columns)}")
+        st.stop()
 
     if is_preaggregated:
         # Data is already weekly aggregated
