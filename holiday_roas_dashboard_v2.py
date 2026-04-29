@@ -474,79 +474,72 @@ This allocation provides a strong foundation for holiday success. We recommend r
         st.subheader("Weekly Budget Allocation")
         st.markdown("**Budget distribution based on historical ROAS performance**")
 
-        # Weekly budget bar chart (stacked)
-        fig_weekly = go.Figure()
+        # Format for display - MOVED TO TOP
+        display_df = allocation.copy()
+        display_df['week'] = display_df['week'].dt.strftime('%Y-%m-%d')
+        display_df['budget_pct'] = display_df['budget_pct'].round(2)
 
-        # Create week labels with both week number and date
-        week_labels = [f"Week {i+1}<br>{allocation['week'].iloc[i].strftime('%Y-%m-%d')}" for i in range(len(allocation))]
+        # Round budget columns
+        budget_cols = ['awareness_budget', 'consideration_budget', 'conversion_budget', 'shopping_budget', 'total_weekly_budget']
+        for col in budget_cols:
+            display_df[col] = display_df[col].round(0)
 
-        fig_weekly.add_trace(go.Bar(
-            x=week_labels,
-            y=allocation['awareness_budget'],
-            name='Awareness',
-            marker_color='#667eea',
-            hovertemplate='<b>Awareness</b><br>$%{y:,.0f}<extra></extra>',
-            text=allocation['awareness_budget'],
-            textposition='inside',
-            texttemplate='$%{text:,.0f}',
-            insidetextanchor='middle'
-        ))
+        # Select columns
+        display_columns = [
+            'week', 'budget_pct', 'awareness_budget', 'consideration_budget',
+            'conversion_budget', 'shopping_budget', 'total_weekly_budget'
+        ]
 
-        fig_weekly.add_trace(go.Bar(
-            x=week_labels,
-            y=allocation['consideration_budget'],
-            name='Consideration',
-            marker_color='#764ba2',
-            hovertemplate='<b>Consideration</b><br>$%{y:,.0f}<extra></extra>',
-            text=allocation['consideration_budget'],
-            textposition='inside',
-            texttemplate='$%{text:,.0f}',
-            insidetextanchor='middle'
-        ))
+        display_df_final = display_df[display_columns].copy()
+        display_df_final.columns = [
+            'Week Start', '% of Budget', 'Awareness ($)', 'Consideration ($)',
+            'Conversion ($)', 'Shopping ($)', 'Total ($)'
+        ]
 
-        fig_weekly.add_trace(go.Bar(
-            x=week_labels,
-            y=allocation['conversion_budget'],
-            name='Conversion',
-            marker_color='#E60023',
-            hovertemplate='<b>Conversion</b><br>$%{y:,.0f}<extra></extra>',
-            text=allocation['conversion_budget'],
-            textposition='inside',
-            texttemplate='$%{text:,.0f}',
-            insidetextanchor='middle'
-        ))
-
-        fig_weekly.add_trace(go.Bar(
-            x=week_labels,
-            y=allocation['shopping_budget'],
-            name='Shopping',
-            marker_color='#ff9800',
-            hovertemplate='<b>Shopping</b><br>$%{y:,.0f}<extra></extra>',
-            text=allocation['shopping_budget'],
-            textposition='inside',
-            texttemplate='$%{text:,.0f}',
-            insidetextanchor='middle'
-        ))
-
-        fig_weekly.update_layout(
-            barmode='stack',
-            title='Weekly Budget by Objective',
-            xaxis_title='Week',
-            yaxis_title='Budget ($)',
-            hovermode='x unified',
-            height=400,
-            template='plotly_white',
-            showlegend=True,
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1
-            )
+        st.dataframe(
+            display_df_final,
+            use_container_width=True,
+            height=400
         )
 
-        st.plotly_chart(fig_weekly, use_container_width=True)
+        # Summary stats
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            peak_week = display_df_final.loc[display_df_final['Total ($)'].idxmax()]
+            st.info(f"🔥 **Peak Week:** {peak_week['Week Start']} (${peak_week['Total ($)']:,.0f})")
+
+        with col2:
+            avg_weekly = display_df_final['Total ($)'].mean()
+            st.info(f"📊 **Avg Weekly Budget:** ${avg_weekly:,.0f}")
+
+        with col3:
+            total_weeks = len(display_df_final)
+            st.info(f"📅 **Campaign Duration:** {total_weeks} weeks")
+
+        st.markdown("---")
+
+        # ROAS Performance by Week - MOVED FROM TAB 2
+        st.markdown("#### ROAS Performance by Week")
+
+        fig_roas = go.Figure()
+
+        fig_roas.add_trace(go.Scatter(
+            x=allocation['week'],
+            y=allocation['avg_roas'],
+            mode='lines+markers',
+            name='Avg ROAS',
+            line=dict(color='#E60023', width=3),
+            marker=dict(size=10)
+        ))
+
+        fig_roas.update_layout(
+            xaxis_title='Week',
+            yaxis_title='ROAS',
+            height=400,
+            template='plotly_white'
+        )
+
+        st.plotly_chart(fig_roas, use_container_width=True)
 
         st.markdown("---")
 
@@ -641,49 +634,6 @@ This allocation provides a strong foundation for holiday success. We recommend r
                         </div>
                     """, unsafe_allow_html=True)
 
-        st.markdown("---")
-
-        # Format for display
-        display_df = allocation.copy()
-        display_df['week'] = display_df['week'].dt.strftime('%Y-%m-%d')
-        display_df['budget_pct'] = display_df['budget_pct'].round(2)
-
-        # Round budget columns
-        budget_cols = ['awareness_budget', 'consideration_budget', 'conversion_budget', 'shopping_budget', 'total_weekly_budget']
-        for col in budget_cols:
-            display_df[col] = display_df[col].round(0)
-
-        # Select columns (removed avg_roas, avg_cpa, avg_ctr, avg_cvr)
-        display_columns = [
-            'week', 'budget_pct', 'awareness_budget', 'consideration_budget',
-            'conversion_budget', 'shopping_budget', 'total_weekly_budget'
-        ]
-
-        display_df = display_df[display_columns].copy()
-        display_df.columns = [
-            'Week Start', '% of Budget', 'Awareness ($)', 'Consideration ($)',
-            'Conversion ($)', 'Shopping ($)', 'Total ($)'
-        ]
-
-        st.dataframe(
-            display_df,
-            use_container_width=True,
-            height=400
-        )
-
-        # Summary stats
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            peak_week = display_df.loc[display_df['Total ($)'].idxmax()]
-            st.info(f"🔥 **Peak Week:** {peak_week['Week Start']} (${peak_week['Total ($)']:,.0f})")
-
-        with col2:
-            avg_weekly = display_df['Total ($)'].mean()
-            st.info(f"📊 **Avg Weekly Budget:** ${avg_weekly:,.0f}")
-
-        with col3:
-            total_weeks = len(display_df)
-            st.info(f"📅 **Campaign Duration:** {total_weeks} weeks")
 
     with tab2:
         st.subheader("Performance Trends")
@@ -731,6 +681,48 @@ This allocation provides a strong foundation for holiday success. We recommend r
             fillcolor='rgba(255, 152, 0, 0.6)'
         ))
 
+        # Find Black Friday week (last Friday in November for 2026 = Nov 27)
+        black_friday_2026 = pd.Timestamp('2026-11-27')
+
+        # Find the week that contains Black Friday
+        bf_week = None
+        for idx, row in allocation.iterrows():
+            week_start = row['week']
+            week_end = week_start + pd.Timedelta(days=6)
+            if week_start <= black_friday_2026 <= week_end:
+                bf_week = week_start
+                bf_total = row['total_weekly_budget']
+                break
+
+        # Add Black Friday annotation if found
+        if bf_week is not None:
+            fig.add_annotation(
+                x=bf_week,
+                y=bf_total,
+                text="🛍️ Black Friday Week",
+                showarrow=True,
+                arrowhead=2,
+                arrowsize=1,
+                arrowwidth=2,
+                arrowcolor='#000000',
+                ax=0,
+                ay=-60,
+                bgcolor='#FFD700',
+                bordercolor='#000000',
+                borderwidth=2,
+                font=dict(size=12, color='#000000', family='Arial Black')
+            )
+
+            # Add vertical line to highlight Black Friday week
+            fig.add_vline(
+                x=bf_week,
+                line_dash="dash",
+                line_color="#FFD700",
+                line_width=3,
+                annotation_text="Black Friday",
+                annotation_position="top"
+            )
+
         fig.update_layout(
             title='Weekly Budget Allocation Over Holiday Season',
             xaxis_title='Week',
@@ -741,30 +733,6 @@ This allocation provides a strong foundation for holiday success. We recommend r
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
-        # ROAS trend
-        st.markdown("---")
-        st.markdown("#### ROAS Performance by Week")
-
-        fig2 = go.Figure()
-
-        fig2.add_trace(go.Scatter(
-            x=allocation['week'],
-            y=allocation['avg_roas'],
-            mode='lines+markers',
-            name='Avg ROAS',
-            line=dict(color='#E60023', width=3),
-            marker=dict(size=10)
-        ))
-
-        fig2.update_layout(
-            xaxis_title='Week',
-            yaxis_title='ROAS',
-            height=400,
-            template='plotly_white'
-        )
-
-        st.plotly_chart(fig2, use_container_width=True)
 
     with tab3:
         st.subheader("Geographic Analysis")
