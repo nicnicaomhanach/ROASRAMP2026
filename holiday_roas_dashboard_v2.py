@@ -524,25 +524,28 @@ This allocation provides a strong foundation for holiday success. We recommend r
         # ROAS Performance by Week - MOVED FROM TAB 2
         st.markdown("#### ROAS Performance by Week")
 
-        fig_roas = go.Figure()
+        if 'avg_roas' in allocation.columns and len(allocation) > 0:
+            fig_roas = go.Figure()
 
-        fig_roas.add_trace(go.Scatter(
-            x=allocation['week'],
-            y=allocation['avg_roas'],
-            mode='lines+markers',
-            name='Avg ROAS',
-            line=dict(color='#E60023', width=3),
-            marker=dict(size=10)
-        ))
+            fig_roas.add_trace(go.Scatter(
+                x=allocation['week'],
+                y=allocation['avg_roas'],
+                mode='lines+markers',
+                name='Avg ROAS',
+                line=dict(color='#E60023', width=3),
+                marker=dict(size=10)
+            ))
 
-        fig_roas.update_layout(
-            xaxis_title='Week',
-            yaxis_title='ROAS',
-            height=400,
-            template='plotly_white'
-        )
+            fig_roas.update_layout(
+                xaxis_title='Week',
+                yaxis_title='ROAS',
+                height=400,
+                template='plotly_white'
+            )
 
-        st.plotly_chart(fig_roas, use_container_width=True)
+            st.plotly_chart(fig_roas, use_container_width=True)
+        else:
+            st.warning("ROAS data not available for the selected filters.")
 
         st.markdown("---")
 
@@ -685,46 +688,51 @@ This allocation provides a strong foundation for holiday success. We recommend r
         ))
 
         # Find Black Friday week (last Friday in November for 2026 = Nov 27)
-        black_friday_2026 = pd.Timestamp('2026-11-27')
+        try:
+            black_friday_2026 = pd.Timestamp('2026-11-27')
 
-        # Find the week that contains Black Friday
-        bf_week = None
-        for idx, row in allocation.iterrows():
-            week_start = row['week']
-            week_end = week_start + pd.Timedelta(days=6)
-            if week_start <= black_friday_2026 <= week_end:
-                bf_week = week_start
-                bf_total = row['total_weekly_budget']
-                break
+            # Find the week that contains Black Friday
+            bf_week = None
+            bf_total = None
+            for idx, row in allocation.iterrows():
+                week_start = row['week']
+                week_end = week_start + pd.Timedelta(days=6)
+                if week_start <= black_friday_2026 <= week_end:
+                    bf_week = week_start
+                    bf_total = row['total_weekly_budget']
+                    break
 
-        # Add Black Friday annotation if found
-        if bf_week is not None:
-            fig.add_annotation(
-                x=bf_week,
-                y=bf_total,
-                text="🛍️ Black Friday Week",
-                showarrow=True,
-                arrowhead=2,
-                arrowsize=1,
-                arrowwidth=2,
-                arrowcolor='#000000',
-                ax=0,
-                ay=-60,
-                bgcolor='#FFD700',
-                bordercolor='#000000',
-                borderwidth=2,
-                font=dict(size=12, color='#000000', family='Arial Black')
-            )
+            # Add Black Friday annotation if found
+            if bf_week is not None and bf_total is not None:
+                fig.add_annotation(
+                    x=bf_week,
+                    y=bf_total,
+                    text="🛍️ Black Friday Week",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowsize=1,
+                    arrowwidth=2,
+                    arrowcolor='#000000',
+                    ax=0,
+                    ay=-60,
+                    bgcolor='#FFD700',
+                    bordercolor='#000000',
+                    borderwidth=2,
+                    font=dict(size=12, color='#000000', family='Arial Black')
+                )
 
-            # Add vertical line to highlight Black Friday week
-            fig.add_vline(
-                x=bf_week,
-                line_dash="dash",
-                line_color="#FFD700",
-                line_width=3,
-                annotation_text="Black Friday",
-                annotation_position="top"
-            )
+                # Add vertical line to highlight Black Friday week
+                fig.add_vline(
+                    x=bf_week,
+                    line_dash="dash",
+                    line_color="#FFD700",
+                    line_width=3,
+                    annotation_text="Black Friday",
+                    annotation_position="top"
+                )
+        except Exception as e:
+            # Silently fail if Black Friday annotation can't be added
+            pass
 
         fig.update_layout(
             title='Weekly Budget Allocation Over Holiday Season',
