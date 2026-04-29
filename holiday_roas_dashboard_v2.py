@@ -476,17 +476,20 @@ This allocation provides a strong foundation for holiday success. We recommend r
 
         # Format for display - MOVED TO TOP
         display_df = allocation.copy()
-        display_df['week'] = display_df['week'].dt.strftime('%Y-%m-%d')
-        display_df['budget_pct'] = display_df['budget_pct'].round(2)
 
-        # Round budget columns
+        # Round budget columns first
         budget_cols = ['awareness_budget', 'consideration_budget', 'conversion_budget', 'shopping_budget', 'total_weekly_budget']
         for col in budget_cols:
             display_df[col] = display_df[col].round(0)
 
+        display_df['budget_pct'] = display_df['budget_pct'].round(2)
+
+        # Format week as string AFTER all other operations
+        display_df['week_display'] = display_df['week'].dt.strftime('%Y-%m-%d')
+
         # Select columns
         display_columns = [
-            'week', 'budget_pct', 'awareness_budget', 'consideration_budget',
+            'week_display', 'budget_pct', 'awareness_budget', 'consideration_budget',
             'conversion_budget', 'shopping_budget', 'total_weekly_budget'
         ]
 
